@@ -81,11 +81,15 @@ async function main() {
     return;
   }
 
-  const combinedMap: Map<string, Map<string, number>> = new Map();
+  const combinedMap: Map<
+    string,
+    Map<"contributions" | "level", number | undefined>
+  > = new Map();
   const allDates = new Set([...contributions.keys(), ...levels.keys()]);
 
   allDates.forEach((date) => {
-    const dateMap = new Map();
+    const dateMap: Map<"contributions" | "level", number | undefined> =
+      new Map();
     if (contributions.has(date)) {
       dateMap.set("contributions", contributions.get(date));
     }
