@@ -22,10 +22,7 @@ async function parseYMLFiles() {
       }
     }
 
-    console.log("Contributions Map:");
-    for (const [date, value] of contributionsMap.entries()) {
-      console.log(`${date}: ${value}`);
-    }
+    return contributionsMap;
   } catch (error) {
     console.error("Error reading files:", error);
   }
@@ -33,7 +30,7 @@ async function parseYMLFiles() {
 
 async function parseHTMLFiles() {
   const folderPath = "./table";
-  const contributionsMap = new Map<string, string>();
+  const levelsMap = new Map<string, number>();
 
   try {
     for await (const file of Deno.readDir(folderPath)) {
@@ -61,19 +58,45 @@ async function parseHTMLFiles() {
           const level = td.getAttribute("data-level");
 
           if (date && level) {
-            contributionsMap.set(date, level);
+            levelsMap.set(date, parseInt(level, 10));
           }
         });
       }
     }
 
-    console.log("Contributions Map:");
-    for (const [date, level] of contributionsMap.entries()) {
-      console.log(`${date}: ${level}`);
-    }
+    return levelsMap;
   } catch (error) {
     console.error("Error processing files:", error);
   }
 }
 
-parseHTMLFiles();
+async function main() {
+  const contributions: Map<string, number> | undefined = await parseYMLFiles();
+  const levels: Map<string, number> | undefined = await parseHTMLFiles();
+
+  if (!contributions || !levels) {
+    console.error(
+      "One or both maps are undefined. Ensure the parsing functions return valid maps."
+    );
+    return;
+  }
+
+  const combinedMap: Map<string, Map<string, number>> = new Map();
+  const allDates = new Set([...contributions.keys(), ...levels.keys()]);
+
+  allDates.forEach((date) => {
+    const dateMap = new Map();
+    if (contributions.has(date)) {
+      dateMap.set("contributions", contributions.get(date));
+    }
+    if (levels.has(date)) {
+      dateMap.set("level", levels.get(date));
+    }
+    combinedMap.set(date, dateMap);
+  });
+
+  console.log("Combined Map:");
+  console.log(combinedMap);
+}
+
+main();
