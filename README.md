@@ -1,3 +1,3 @@
 # README
 
-> deno main.ts --allow-read
+> deno --allow-read main.ts
