@@ -110,10 +110,13 @@ async function writeCombinedMapAsCSV(
   console.log(`Combined map has been written as CSV to ${filePath}`);
 }
 
-function computeContributionRanges(
-  combinedMap: Map<string, Map<"level" | "contributions", number | undefined>>
+async function computeContributionRanges(
+  combinedMap: Map<string, Map<"level" | "contributions", number | undefined>>,
+  filePath: string
 ) {
   const levelContributions: Map<string, Map<number, number[]>> = new Map();
+  const ranges: Map<string, { level: number; min: number; max: number }[]> =
+    new Map();
 
   for (const [key, values] of combinedMap) {
     const year = key.split("-")[0];
@@ -136,27 +139,36 @@ function computeContributionRanges(
   }
 
   for (const [year] of levelContributions) {
-    const ranges: { level: number; min: number; max: number }[] = [];
     const contributionsForYear = levelContributions.get(year);
     if (!contributionsForYear) {
       return;
     }
 
+    if (!ranges.get(year)) {
+      ranges.set(year, []);
+    }
+
     for (const [level, contributions] of contributionsForYear) {
       const min = Math.min(...contributions);
       const max = Math.max(...contributions);
-      ranges.push({ level, min, max });
+      ranges.get(year)!.push({ level, min, max });
     }
 
     // Sort by level for clarity
-    ranges.sort((a, b) => a.level - b.level);
-
-    console.log(``);
-    console.log(`YEAR ${year}`);
-    ranges.forEach(({ level, min, max }) => {
-      console.log(`Level ${level}: Min = ${min}, Max = ${max}`);
-    });
+    ranges.get(year)!.sort((a, b) => a.level - b.level);
   }
+
+  let output: string = "";
+  for (const [year, rangesPerYear] of ranges) {
+    output += year + "\n";
+    rangesPerYear.forEach(({ level, min, max }) => {
+      output += `Level ${level}: Min = ${min}, Max = ${max}\n`;
+    });
+    output += "\n";
+  }
+
+  await Deno.writeTextFile(filePath, output);
+  console.log(`Ranges have been written as CSV to ${filePath}`);
 }
 
 async function main() {
@@ -188,8 +200,8 @@ async function main() {
     combinedMap.set(date, dateMap);
   });
 
-  writeCombinedMapAsCSV(combinedMap, "csv/contritbutions-and-levels.txt");
-  computeContributionRanges(combinedMap);
+  await writeCombinedMapAsCSV(combinedMap, "csv/contritbutions-and-levels.txt");
+  await computeContributionRanges(combinedMap, "csv/ranges.txt");
 }
 
 main();
