@@ -110,6 +110,55 @@ async function writeCombinedMapAsCSV(
   console.log(`Combined map has been written as CSV to ${filePath}`);
 }
 
+function computeContributionRanges(
+  combinedMap: Map<string, Map<"level" | "contributions", number | undefined>>
+) {
+  const levelContributions: Map<string, Map<number, number[]>> = new Map();
+
+  for (const [key, values] of combinedMap) {
+    const year = key.split("-")[0];
+
+    if (!levelContributions.has(year)) {
+      levelContributions.set(year, new Map());
+    }
+
+    const level = values.get("level");
+    const contributions = values.get("contributions");
+
+    if (level === undefined || contributions === undefined) {
+      return;
+    }
+
+    if (!levelContributions.get(year)?.has(level)) {
+      levelContributions.get(year)?.set(level, []);
+    }
+    levelContributions.get(year)!.get(level)!.push(contributions);
+  }
+
+  for (const [year] of levelContributions) {
+    const ranges: { level: number; min: number; max: number }[] = [];
+    const contributionsForYear = levelContributions.get(year);
+    if (!contributionsForYear) {
+      return;
+    }
+
+    for (const [level, contributions] of contributionsForYear) {
+      const min = Math.min(...contributions);
+      const max = Math.max(...contributions);
+      ranges.push({ level, min, max });
+    }
+
+    // Sort by level for clarity
+    ranges.sort((a, b) => a.level - b.level);
+
+    console.log(``);
+    console.log(`YEAR ${year}`);
+    ranges.forEach(({ level, min, max }) => {
+      console.log(`Level ${level}: Min = ${min}, Max = ${max}`);
+    });
+  }
+}
+
 async function main() {
   const contributions: Map<string, number> | undefined = await parseYMLFiles();
   const levels: Map<string, number> | undefined = await parseHTMLFiles();
@@ -140,7 +189,7 @@ async function main() {
   });
 
   writeCombinedMapAsCSV(combinedMap, "csv/contritbutions-and-levels.txt");
-
+  computeContributionRanges(combinedMap);
 }
 
 main();
