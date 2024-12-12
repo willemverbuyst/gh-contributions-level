@@ -69,6 +69,46 @@ async function parseHTMLFiles() {
     console.error("Error processing files:", error);
   }
 }
+function getMonthName(monthNumber: number) {
+  if (monthNumber > 12 || monthNumber < 0) {
+    throw new Error("invalid month number");
+  }
+
+  const monthNames = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+  ];
+
+  return monthNames[monthNumber - 1];
+}
+
+async function writeCombinedMapAsCSV(
+  combinedMap: Map<string, Map<"contributions" | "level", number | undefined>>,
+  filePath: string
+) {
+  let output = "date,year,month,contributions,level\n";
+
+  for (const [date, innerMap] of combinedMap) {
+    const contributions = innerMap.get("contributions") || 0;
+    const level = innerMap.get("level") || 0;
+    output += `${date},${date.split("-")[0]},${getMonthName(
+      Number(date.split("-")[1])
+    )},${contributions},${level}\n`;
+  }
+
+  await Deno.writeTextFile(filePath, output);
+  console.log(`Combined map has been written as CSV to ${filePath}`);
+}
 
 async function main() {
   const contributions: Map<string, number> | undefined = await parseYMLFiles();
@@ -99,8 +139,8 @@ async function main() {
     combinedMap.set(date, dateMap);
   });
 
-  console.log("Combined Map:");
-  console.log(combinedMap);
+  writeCombinedMapAsCSV(combinedMap, "csv/contritbutions-and-levels.txt");
+
 }
 
 main();
