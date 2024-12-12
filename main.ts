@@ -22,9 +22,14 @@ async function parseYMLFiles() {
       }
     }
 
+    if (!contributionsMap) {
+      throw new Error("Parsing of yaml files failed.");
+    }
+
     return contributionsMap;
   } catch (error) {
-    console.error("Error reading files:", error);
+    console.error("Error reading files", error);
+    throw new Error("Error reading files");
   }
 }
 
@@ -64,9 +69,14 @@ async function parseHTMLFiles() {
       }
     }
 
+    if (!levelsMap) {
+      throw new Error("Parsing of yaml files failed.");
+    }
+
     return levelsMap;
   } catch (error) {
     console.error("Error processing files:", error);
+    throw new Error("Error reading files");
   }
 }
 function getMonthName(monthNumber: number) {
@@ -171,17 +181,10 @@ async function computeContributionRanges(
   console.log(`Ranges have been written as CSV to ${filePath}`);
 }
 
-async function main() {
-  const contributions: Map<string, number> | undefined = await parseYMLFiles();
-  const levels: Map<string, number> | undefined = await parseHTMLFiles();
-
-  if (!contributions || !levels) {
-    console.error(
-      "One or both maps are undefined. Ensure the parsing functions return valid maps."
-    );
-    return;
-  }
-
+function createCombinedMap(
+  contributions: Map<string, number>,
+  levels: Map<string, number>
+) {
   const combinedMap: Map<
     string,
     Map<"contributions" | "level", number | undefined>
@@ -199,6 +202,15 @@ async function main() {
     }
     combinedMap.set(date, dateMap);
   });
+
+  return combinedMap;
+}
+
+async function main() {
+  const contributions = await parseYMLFiles();
+  const levels = await parseHTMLFiles();
+
+  const combinedMap = createCombinedMap(contributions, levels);
 
   await writeCombinedMapAsCSV(combinedMap, "csv/contritbutions-and-levels.txt");
   await computeContributionRanges(combinedMap, "csv/ranges.txt");
